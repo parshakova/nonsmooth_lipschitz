@@ -64,7 +64,7 @@ def sign_subgradient_descent_polyak(w0, s, c, p, q, f_star=0, max_iters=1000):
     return w, logging
 
 
-def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False):
+def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
     try:
         plt.rcParams.update({
             "text.usetex": True,
@@ -73,14 +73,16 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False):
     except Exception:
         plt.rcParams.update({"text.usetex": False})
 
+    if max_iter is None: max_iter = len(logging["loss"])
+
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
-    axes[0].plot(logging["loss"])
+    axes[0].plot(logging["loss"][:max_iter])
     axes[0].set_yscale("log") 
     axes[0].set_xlabel(r"$\mathrm{Iteration}$")
     axes[0].set_ylabel(r"$f(W_t)$")
 
-    axes[1].plot(ws.sum(axis=1))
+    axes[1].plot(ws[:max_iter].sum(axis=1))
     # axes[1].set_yscale("log") 
     axes[1].set_xlabel(r"$\mathrm{Iteration}$")
     axes[1].set_ylabel(r"$(W_t)_{1,1} + (W_t)_{2, 2}$")
@@ -98,7 +100,7 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False):
 def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
     ws_show = ws[:n_show]
 
-    shift = 0.05
+    shift = 0.1
     x1_min = min(ws_show[:, 0].min(), 0) - shift
     x1_max = ws_show[:, 0].max() + shift
     x2_min = min(ws_show[:, 1].min(), 0) - shift
@@ -125,8 +127,8 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
             linewidth=1.2, linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
 
     ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
+    ax.scatter(0, 0, color="black", s=150, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
     sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=30, zorder=2)
-    ax.scatter(0, 0, color="black", s=150, zorder=3, marker="*", label=r"$(0,0)$")
     plt.colorbar(sc, ax=ax, label=r"iteration $t$")
     
     ax.legend()
