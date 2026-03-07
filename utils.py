@@ -5,7 +5,25 @@ import numpy as np
 
 
 
-def f(w, c): 
+def _set_style():
+    try:
+        plt.rcParams.update({
+            "text.usetex": True,
+            "font.family": "serif",
+        })
+    except Exception:
+        plt.rcParams.update({"text.usetex": False})
+    plt.rcParams.update({
+        "font.size": 16,
+        "axes.labelsize": 18,
+        "axes.titlesize": 18,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
+        "legend.fontsize": 14,
+    })
+
+
+def f(w, c):
     return c * np.abs(w[0] + w[1]) + np.abs(w[0] - w[1])
 
 
@@ -66,13 +84,7 @@ def sign_subgradient_descent_polyak(w0, s, c, p, q, f_star=0, max_iters=1000):
 
 
 def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
-    try:
-        plt.rcParams.update({
-            "text.usetex": True,
-            "font.family": "serif",
-        })
-    except Exception:
-        plt.rcParams.update({"text.usetex": False})
+    _set_style()
 
     if max_iter is None: max_iter = len(logging["loss"])
 
@@ -99,6 +111,7 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
 
 
 def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
+    _set_style()
     ws_show = ws[:n_show]
 
     shift = 0.1
