@@ -31,14 +31,15 @@ def sign_subgradient_descent(w0, s, c, p, q, alpha_0=1, max_iters=1000):
     return w, logging
 
 
-def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000):
+def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000, fixed_gamma=True):
     w = np.copy(w0)
     E = np.zeros_like(w0, dtype=float)
     gamma = 1 / (max_iters**0.5)
     logging = {"loss": [], "w": []}
     for t in range(max_iters):
         G = subgrad_f(w, s, c, p, q)
-        M = gamma * G + E
+        gamma_t = 1 / ((t+1)**0.5) if not fixed_gamma else gamma
+        M = gamma_t * G + E
         D = sign_s(M, s)
         rank = (M != 0).sum()
         delta = (np.abs(M).sum() / rank) * D
@@ -57,7 +58,7 @@ def sign_subgradient_descent_polyak(w0, s, c, p, q, f_star=0, max_iters=1000):
     for t in range(max_iters):
         G = subgrad_f(w, s, c, p, q)
         D = sign_s(G, s)  
-        alpha_t = (logging["loss"][-1] - f_star) / (G**2).sum()
+        alpha_t = (logging["loss"][-1] - f_star) / (np.abs(G).max())
         w = w - alpha_t * D
         logging["loss"].append(f(w, c).item())
         logging["w"].append(w.copy())
@@ -79,12 +80,12 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
 
     axes[0].plot(logging["loss"][:max_iter])
     axes[0].set_yscale("log") 
-    axes[0].set_xlabel(r"$\mathrm{Iteration}$")
+    axes[0].set_xlabel(r"Iteration $t$")
     axes[0].set_ylabel(r"$f(W_t)$")
 
     axes[1].plot(ws[:max_iter].sum(axis=1))
     # axes[1].set_yscale("log") 
-    axes[1].set_xlabel(r"$\mathrm{Iteration}$")
+    axes[1].set_xlabel(r"Iteration $t$")
     axes[1].set_ylabel(r"$(W_t)_{1,1} + (W_t)_{2, 2}$")
 
     if xlog:
@@ -127,9 +128,9 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
             linewidth=1.2, linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
 
     ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
-    ax.scatter(0, 0, color="black", s=150, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
+    ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
     sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=30, zorder=2)
-    plt.colorbar(sc, ax=ax, label=r"iteration $t$")
+    plt.colorbar(sc, ax=ax, label=r"Iteration $t$")
     
     ax.legend()
 
