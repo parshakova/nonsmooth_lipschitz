@@ -76,7 +76,7 @@ def sign_subgradient_descent_polyak(w0, s, c, p, q, f_star=0, max_iters=1000):
     for t in range(max_iters):
         G = subgrad_f(w, s, c, p, q)
         D = sign_s(G, s)  
-        alpha_t = (logging["loss"][-1] - f_star) / (np.abs(G).max())
+        alpha_t = (logging["loss"][-1] - f_star) / (np.abs(G).sum())
         w = w - alpha_t * D
         logging["loss"].append(f(w, c).item())
         logging["w"].append(w.copy())
