@@ -68,6 +68,27 @@ def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000, fixed_gamma=True
     return w, logging
 
 
+def sign_subgradient_descent_ef_momentum(w0, s, c, p, q, beta, max_iters=1000, fixed_gamma=True):
+    w = np.copy(w0)
+    E = np.zeros_like(w0, dtype=float)
+    M = np.zeros_like(w0, dtype=float)
+    gamma = 1 / (max_iters**0.5)
+    logging = {"loss": [], "w": []}
+    for t in range(max_iters):
+        G = subgrad_f(w, s, c, p, q)
+        M = beta * M + (1 - beta) * G
+        gamma_t = 1 / ((t+1)**0.5) if not fixed_gamma else gamma
+        P = gamma_t * M + E
+        D = sign_s(P, s)
+        rank = (P != 0).sum()
+        delta = (np.abs(P).sum() / rank) * D
+        w = w - delta
+        E = P - delta
+        logging["loss"].append(f(w, c).item())
+        logging["w"].append(w.copy())
+    return w, logging
+
+
 def sign_subgradient_descent_momentum(w0, s, c, p, q, beta, max_iters=1000):
     w = np.copy(w0)
     M = np.zeros_like(w0, dtype=float) 
@@ -103,17 +124,23 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
 
     if max_iter is None: max_iter = len(logging["loss"])
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
-    axes[0].plot(logging["loss"][:max_iter])
-    axes[0].set_yscale("log") 
+    axes[0].plot(logging["loss"][:max_iter], label=r"$f(W_t)$")
+    axes[0].set_yscale("log")
     axes[0].set_xlabel(r"Iteration $t$")
     axes[0].set_ylabel(r"$f(W_t)$")
+    # axes[0].legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
 
-    axes[1].plot(ws[:max_iter].sum(axis=1))
-    # axes[1].set_yscale("log") 
+    w_sum = ws[:max_iter].sum(axis=1)
+    axes[1].plot(w_sum, label=r"$(W_t)_{1,1} + (W_t)_{2,2}$")
+    # axes[1].set_yscale("log")
     axes[1].set_xlabel(r"Iteration $t$")
     axes[1].set_ylabel(r"$(W_t)_{1,1} + (W_t)_{2, 2}$")
+    if w_sum.max() - w_sum.min() < 1e-10:
+        mid = w_sum.mean()
+        axes[1].set_ylim(mid * 0.95, mid * 1.05)
+    # axes[1].legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
 
     if xlog:
         axes[0].set_xscale("log")
@@ -125,7 +152,7 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
     plt.show()
 
 
-def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
+def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(6, 4)):
     _set_style()
     ws_show = ws[:n_show]
 
@@ -151,20 +178,19 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(12, 6)):
 
     x_line = np.linspace(x1_min, x1_max, 200)
     ax.plot(x_line, w0.sum() - x_line, color="red", linewidth=1.2, linestyle="--", 
-            label=r"$W_{1, 1} + W_{2, 2} = (W_0)_{1,1} + (W_0)_{2, 2}$")
-    ax.plot(np.linspace(0, x1_max, 200), np.linspace(0, x1_max, 200), color="orange", 
+            label=rf"$W_{{1, 1}} + W_{{2, 2}} = {w0.sum()}$")
+    ax.plot(x_line, x_line, color="orange", 
             linewidth=1.2, linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
 
     ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
     ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
-    sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=30, zorder=2)
+    sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=15, zorder=2)
     plt.colorbar(sc, ax=ax, label=r"Iteration $t$")
-    
-    ax.legend()
 
     ax.set_xlabel(r"$W_{1, 1}$")
-    ax.set_ylabel(r"$W_{2, 2}$") 
+    ax.set_ylabel(r"$W_{2, 2}$")
     plt.tight_layout()
+    fig.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
     if filename is not None:
         plt.savefig(f"plots/{filename}_trajectory.pdf", bbox_inches="tight")
     plt.show()
