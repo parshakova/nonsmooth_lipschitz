@@ -49,10 +49,10 @@ def sign_subgradient_descent(w0, s, c, p, q, alpha_0=1, max_iters=1000):
     return w, logging
 
 
-def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000, fixed_gamma=True):
+def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000, fixed_gamma=True, gamma0=None):
     w = np.copy(w0)
     E = np.zeros_like(w0, dtype=float)
-    gamma = 1 / (max_iters**0.5)
+    gamma = 1 / (max_iters**0.5) if gamma0 is None else gamma0
     logging = {"loss": [], "w": []}
     for t in range(max_iters):
         G = subgrad_f(w, s, c, p, q)
@@ -68,15 +68,15 @@ def sign_subgradient_descent_ef(w0, s, c, p, q, max_iters=1000, fixed_gamma=True
     return w, logging
 
 
-def sign_subgradient_descent_ef_momentum(w0, s, c, p, q, beta, max_iters=1000, fixed_gamma=True):
+def sign_subgradient_descent_ef_momentum(w0, s, c, p, q, beta, max_iters=1000, fixed_gamma=True, gamma0=None):
     w = np.copy(w0)
     E = np.zeros_like(w0, dtype=float)
     M = np.zeros_like(w0, dtype=float)
-    gamma = 1 / (max_iters**0.5)
+    gamma = 1 / (max_iters**0.5) if gamma0 is None else gamma0
     logging = {"loss": [], "w": []}
     for t in range(max_iters):
         G = subgrad_f(w, s, c, p, q)
-        M = beta * M + (1 - beta) * G
+        M = beta * M + (1 - beta) * G 
         gamma_t = 1 / ((t+1)**0.5) if not fixed_gamma else gamma
         P = gamma_t * M + E
         D = sign_s(P, s)
@@ -85,7 +85,7 @@ def sign_subgradient_descent_ef_momentum(w0, s, c, p, q, beta, max_iters=1000, f
         w = w - delta
         E = P - delta
         logging["loss"].append(f(w, c).item())
-        logging["w"].append(w.copy())
+        logging["w"].append(w.copy()) 
     return w, logging
 
 
@@ -184,7 +184,7 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(6, 4)):
 
     ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
     ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
-    sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=15, zorder=2)
+    sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=10, zorder=2)
     plt.colorbar(sc, ax=ax, label=r"Iteration $t$")
 
     ax.set_xlabel(r"$W_{1, 1}$")
