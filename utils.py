@@ -104,6 +104,22 @@ def sign_subgradient_descent_momentum(w0, s, c, p, q, beta, max_iters=1000):
     return w, logging
 
 
+def sign_subgradient_descent_momentum_beta_to_1(w0, s, c, p, q, max_iters=1000):
+    w = np.copy(w0)
+    M = np.zeros_like(w0, dtype=float) 
+    logging = {"loss": [], "w": []}
+    for t in range(max_iters):
+        G = subgrad_f(w, s, c, p, q)
+        alpha_t = 1 / (t + 1)
+        beta = 1 - 1 / (t + 1)
+        M = beta * M + (1-beta) * G 
+        D = sign_s(M, s) 
+        w = w - alpha_t * D 
+        logging["loss"].append(f(w, c).item())
+        logging["w"].append(w.copy())
+    return w, logging
+
+
 def sign_subgradient_descent_polyak(w0, s, c, p, q, f_star=0, max_iters=1000):
     w = np.copy(w0)
     logging = {"loss": [], "w": []}
