@@ -168,7 +168,7 @@ def plot_loss_and_w_sum(ws, logging, filename=None, xlog=False, max_iter=None):
     plt.show()
 
 
-def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(6, 4)):
+def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(7, 4.5)):
     _set_style()
     ws_show = ws[:n_show]
 
@@ -193,20 +193,61 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(6, 4)):
     ax.set_ylim(x2_min, x2_max)
 
     x_line = np.linspace(x1_min, x1_max, 200)
-    ax.plot(x_line, w0.sum() - x_line, color="red", linewidth=1.2, linestyle="--", 
-            label=rf"$W_{{1, 1}} + W_{{2, 2}} = {w0.sum()}$")
-    ax.plot(x_line, x_line, color="orange", 
-            linewidth=1.2, linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
+    ax.plot(x_line, w0.sum() - x_line, color="olive", linewidth=1., linestyle="--",
+            label=rf"$W_{{1, 1}} + W_{{2, 2}} = {int(w0.sum())}$")
+    ax.plot(x_line, x_line, color="maroon",
+            linewidth=1., linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
 
     ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
     ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
     sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show), cmap="viridis", s=10, zorder=2)
-    plt.colorbar(sc, ax=ax, label=r"Iteration $t$")
+    cbar = plt.colorbar(sc, ax=ax, label=r"Iteration $t$")
+    cbar.set_ticks(np.linspace(1, n_show, 5, dtype=int))
 
+    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
     ax.set_xlabel(r"$W_{1, 1}$")
     ax.set_ylabel(r"$W_{2, 2}$")
     plt.tight_layout()
     fig.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
     if filename is not None:
         plt.savefig(f"plots/{filename}_trajectory.pdf", bbox_inches="tight")
+    plt.show()
+
+
+def countex_level_sets(c, xlim, ylim, filename=None, figsize=(6, 4), show_ticks=True):
+    _set_style()
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_facecolor("white")
+    ax.grid(False)
+
+    x1 = np.linspace(xlim[0], xlim[1], 300)
+    x2 = np.linspace(ylim[0], ylim[1], 300)
+    X1, X2 = np.meshgrid(x1, x2)
+    Z = c * np.abs(X1 + X2) + np.abs(X1 - X2)
+    cf = ax.contourf(X1, X2, Z, levels=30, cmap="coolwarm", alpha=0.6, zorder=0)
+    ax.contour(X1, X2, Z, levels=30, colors="white", linewidths=0.4, alpha=0.4, zorder=0)
+
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+    ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
+
+    cbar = plt.colorbar(cf, ax=ax, label=r"$f(W)$")
+    cbar.locator = plt.MaxNLocator(4)
+    cbar.update_ticks()
+    ax.set_xlabel(r"$W_{1, 1}$")
+    ax.set_ylabel(r"$W_{2, 2}$")
+
+    if not show_ticks:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    else:
+        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+
+    plt.tight_layout()
+    fig.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
+    if filename is not None:
+        plt.savefig(f"plots/{filename}_levelsets.pdf", bbox_inches="tight")
     plt.show()
