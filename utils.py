@@ -193,7 +193,7 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(7, 4.5)):
     ax.set_ylim(x2_min, x2_max)
 
     x_line = np.linspace(x1_min, x1_max, 200)
-    ax.plot(x_line, w0.sum() - x_line, color="olive", linewidth=1., linestyle="--",
+    ax.plot(x_line, w0.sum() - x_line, color="forestgreen", linewidth=1., linestyle="-.",
             label=rf"$W_{{1, 1}} + W_{{2, 2}} = {int(w0.sum())}$")
     ax.plot(x_line, x_line, color="maroon",
             linewidth=1., linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
