@@ -232,6 +232,10 @@ def countex_level_sets(c, xlim, ylim, filename=None, figsize=(6, 4), show_ticks=
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
+    x_line = np.linspace(xlim[0], xlim[1], 200)
+    ax.plot(x_line, x_line, color="maroon",
+            linewidth=1., linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
+
     ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*", label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
 
     cbar = plt.colorbar(cf, ax=ax, label=r"$f(W)$")
