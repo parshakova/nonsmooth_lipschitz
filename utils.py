@@ -215,6 +215,76 @@ def plot_trajectory(ws, w0, c, n_show=100, filename=None, figsize=(7, 4.5)):
     plt.show()
 
 
+def plot_trajectory_side_by_side(ws_left, ws_right, w0, c, n_show=100,
+                                 titles=(None, None), filename=None):
+    _set_style()
+    ws_left_show = ws_left[:n_show]
+    ws_right_show = ws_right[:n_show]
+
+    all_ws = np.concatenate([ws_left_show, ws_right_show], axis=0)
+    shift = 0.1
+    x1_min = min(all_ws[:, 0].min(), 0) - shift
+    x1_max = all_ws[:, 0].max() + shift
+    x2_min = min(all_ws[:, 1].min(), 0) - shift
+    x2_max = all_ws[:, 1].max() + shift
+
+    # Each plot panel is 7 wide (matching plot_trajectory), height 4.5,
+    # colorbar gets a thin column (0.3), with small gaps.
+    fig = plt.figure(figsize=(15, 4.5))
+    gs = fig.add_gridspec(1, 2, width_ratios=[14.3, 0.3], wspace=0.05)
+    gs_plots = gs[0, 0].subgridspec(1, 2, wspace=0.175)
+    ax_left = fig.add_subplot(gs_plots[0, 0])
+    ax_right = fig.add_subplot(gs_plots[0, 1])
+    cbar_ax = fig.add_subplot(gs[0, 1])
+    axes = [ax_left, ax_right]
+
+    x1 = np.linspace(x1_min, x1_max, 300)
+    x2 = np.linspace(x2_min, x2_max, 300)
+    X1, X2 = np.meshgrid(x1, x2)
+    Z = c * np.abs(X1 + X2) + np.abs(X1 - X2)
+    x_line = np.linspace(x1_min, x1_max, 200)
+
+    sc = None
+    for i, (ax, ws_show) in enumerate(zip(axes, [ws_left_show, ws_right_show])):
+        ax.set_facecolor("white")
+        ax.grid(False)
+        ax.contourf(X1, X2, Z, levels=30, cmap="coolwarm", alpha=0.6, zorder=0)
+        ax.contour(X1, X2, Z, levels=30, colors="white", linewidths=0.4, alpha=0.4, zorder=0)
+        ax.set_xlim(x1_min, x1_max)
+        ax.set_ylim(x2_min, x2_max)
+
+        ax.plot(x_line, w0.sum() - x_line, color="forestgreen", linewidth=1., linestyle="-.",
+                label=rf"$W_{{1, 1}} + W_{{2, 2}} = {int(w0.sum())}$")
+        ax.plot(x_line, x_line, color="maroon",
+                linewidth=1., linestyle="--", label=r"$W_{1, 1} = W_{2, 2}$")
+
+        ax.plot(ws_show[:, 0], ws_show[:, 1], color="gray", alpha=0.3, linewidth=0.8, zorder=1)
+        ax.scatter(0, 0, color="magenta", s=100, zorder=3, marker="*",
+                   label=r"$(W_{1,1}^\star, W_{2,2}^\star)$")
+        sc = ax.scatter(ws_show[:, 0], ws_show[:, 1], c=np.arange(n_show),
+                        cmap="viridis", s=10, zorder=2, vmin=0, vmax=n_show - 1)
+
+        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.set_xlabel(r"$W_{1, 1}$", fontsize=22)
+        ax.set_ylabel(r"$W_{2, 2}$", fontsize=22)
+        ax.tick_params(labelsize=18)
+        if titles[i] is not None:
+            ax.set_title(titles[i], fontsize=22)
+
+    cbar = fig.colorbar(sc, cax=cbar_ax)
+    cbar.set_label(r"Iteration $t$", fontsize=22)
+    cbar.ax.tick_params(labelsize=18)
+    cbar.set_ticks(np.linspace(1, n_show, 5, dtype=int))
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.9),
+               ncol=3, frameon=False, fontsize=18)
+    if filename is not None:
+        plt.savefig(f"plots/{filename}_trajectory.pdf", bbox_inches="tight")
+    plt.show()
+
+
 def countex_level_sets(c, xlim, ylim, filename=None, figsize=(6, 4), show_ticks=True):
     _set_style()
 
@@ -254,4 +324,113 @@ def countex_level_sets(c, xlim, ylim, filename=None, figsize=(6, 4), show_ticks=
     fig.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
     if filename is not None:
         plt.savefig(f"plots/{filename}_levelsets.pdf", bbox_inches="tight")
+    plt.show()
+
+
+
+
+def get_best_trial(df, label):
+    """Return rows for the config with the lowest final validation loss."""
+    final = df.dropna(subset=["valid/ce_loss"]).groupby("config")["valid/ce_loss"].last()
+    best_config = final.idxmin()
+    best_df = df[df["config"] == best_config].copy().sort_values("global_step")
+    print(f"{label}: best config = {best_config}, final valid loss = {final.min():.4f}")
+    return best_df
+
+
+def plot_loss_vs_step(trials, metric, ylabel, filename=None, sparse=False):
+    """Plot a metric vs. step for multiple optimizer trials."""
+    COLORS = {
+        "MuonMax": "#00518F",
+        "EF-MuonMax": "#FF6B35",
+        "EF-Muon": "#8A2BE2",
+        "Vanilla Muon": "#2CA02C",
+        "Muon": "#FF7F0E",
+    }
+    fig, ax = plt.subplots(figsize=(4, 3))
+    for label, df in trials:
+        sub = df.dropna(subset=[metric]) if sparse else df
+        steps = sub["global_step"].values
+        vals = sub[metric].values
+        kwargs = dict(marker="o", markersize=3) if sparse else {}
+        ax.plot(steps, vals, label=label, color=COLORS[label],
+                linewidth=2, alpha=0.85, **kwargs)
+    ax.set_xlabel("Iteration", fontsize=10)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.tick_params(labelsize=8)
+    ax.grid(axis="both", lw=0.2, ls="--", zorder=0)
+    ax.legend(loc="upper right", fontsize=10)
+    fig.subplots_adjust(top=0.95, bottom=0.17, left=0.17, right=0.95)
+    if filename:
+        plt.savefig(f"plots/{filename}.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
+
+
+def plot_loss_vs_step_side_by_side(cifar_trials, trials, metric, ylabel,
+                                   titles=("Image classification", "Language modeling"),
+                                   filename=None, sparse=False):
+    """Plot a metric vs. step for CIFAR and nanoGPT trials side by side with unified legend."""
+    COLORS = {
+        "MuonMax": "#00518F",
+        "EF-MuonMax": "#FF6B35",
+        "EF-Muon": "#8A2BE2",
+        "Vanilla Muon": "#2CA02C",
+        "Muon": "#FF7F0E",
+    }
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
+
+    for ax, trial_list, title in zip(axes, [cifar_trials, trials], titles):
+        for label, df in trial_list:
+            sub = df.dropna(subset=[metric]) if sparse else df
+            steps = sub["global_step"].values
+            vals = sub[metric].values
+            kwargs = dict(marker="o", markersize=3) if sparse else {}
+            ax.plot(steps, vals, label=label, color=COLORS[label],
+                    linewidth=2, alpha=0.85, **kwargs)
+        ax.set_xlabel("Iteration", fontsize=22)
+        ax.set_ylabel(ylabel, fontsize=22)
+        ax.set_title(title, fontsize=22)
+        ax.tick_params(labelsize=18)
+        ax.grid(axis="both", lw=0.2, ls="--", zorder=0)
+
+    # Unified legend on top
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center",
+               bbox_to_anchor=(0.5, 1.05), ncol=len(labels), frameon=False, fontsize=18)
+    fig.subplots_adjust(top=0.85, bottom=0.17, left=0.10, right=0.95, wspace=0.20)
+    if filename:
+        plt.savefig(f"plots/{filename}.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
+
+
+def plot_final_metric_vs_lr(dfs, metric, ylabel, filename=None):
+    """Plot final value of a (sparse) metric vs. effective LR for each config."""
+    COLORS = {
+        "MuonMax": "#00518F",
+        "EF-MuonMax": "#FF6B35",
+        "EF-Muon": "#8A2BE2",
+        "Vanilla Muon": "#2CA02C",
+        "Muon": "#FF7F0E",
+    }
+    fig, ax = plt.subplots(figsize=(4, 3))
+    for label, df in dfs:
+        final = (df.dropna(subset=[metric])
+                   .groupby("config")
+                   .agg(lr=("base_lr", "first"),
+                        mult=("lr_multiplier", "first"),
+                        val=(metric, "last")))
+        # final["eff_lr"] = final["lr"] * final["mult"]
+        final["eff_lr"] = final["lr"]
+        final = final.sort_values("eff_lr")
+        ax.plot(final["eff_lr"], final["val"], label=label, color=COLORS[label],
+                linewidth=2, alpha=0.85, marker="o", markersize=4)
+    ax.set_xscale("log")
+    ax.set_xlabel("Learning Rate", fontsize=10)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.tick_params(labelsize=8)
+    ax.grid(axis="both", lw=0.2, ls="--", zorder=0)
+    ax.legend(loc="upper left", fontsize=10)
+    fig.subplots_adjust(top=0.95, bottom=0.17, left=0.17, right=0.95)
+    if filename:
+        plt.savefig(f"plots/{filename}.pdf", format="pdf", bbox_inches="tight")
     plt.show()
