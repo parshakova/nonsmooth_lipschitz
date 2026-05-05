@@ -384,9 +384,9 @@ def plot_loss_vs_step_side_by_side(cifar_trials, trials, metric, ylabel,
             sub = df.dropna(subset=[metric]) if sparse else df
             steps = sub["global_step"].values
             vals = sub[metric].values
-            kwargs = dict(marker="o", markersize=3) if sparse else {}
+            kwargs = dict(marker="o", markersize=7) if sparse else {}
             ax.plot(steps, vals, label=label, color=COLORS[label],
-                    linewidth=2, alpha=0.85, **kwargs)
+                    linewidth=4, alpha=0.85, **kwargs)
         ax.set_xlabel("Iteration", fontsize=22)
         ax.set_ylabel(ylabel, fontsize=22)
         ax.set_title(title, fontsize=22)
